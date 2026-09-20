@@ -1626,6 +1626,27 @@ label > small {
   color: #9ca98c;
   margin-top: 7px;
 }
+.staff-password-form {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.staff-password-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.staff-password-form label {
+  font-size: 11px;
+}
+.staff-password-form input {
+  min-height: 34px;
+  font-size: 12px;
+}
+.staff-password-form .form-note {
+  font-size: 11px;
+}
 .pending-panel {
   margin-top: 22px;
 }

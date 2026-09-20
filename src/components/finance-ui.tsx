@@ -22,10 +22,10 @@ import type {
 } from "@/lib/records";
 import { formatDate, formatMoney, paymentState } from "@/lib/format";
 import { Badge } from "./ui";
+import { CurrencySelect, COMMON_CURRENCIES as CURRENCIES } from "./currency";
 import { Modal } from "./client-modal";
 import { Feedback, PreviewNote, SubmitButton } from "./forms";
 
-const CURRENCIES = ["USD", "LKR", "INR", "EUR", "GBP", "AED", "AUD", "CAD", "SGD"];
 type PartyOption = {
   id: string;
   code: string;
@@ -113,24 +113,7 @@ export function RegisterFilterForm({
 }
 
 function CurrencyInput({ name, value }: { name: string; value?: string }) {
-  return (
-    <>
-      <input
-        name={name}
-        defaultValue={value}
-        list="finance-currency-list"
-        maxLength={3}
-        minLength={3}
-        pattern="[A-Za-z]{3}"
-        required
-      />
-      <datalist id="finance-currency-list">
-        {CURRENCIES.map((currency) => (
-          <option key={currency} value={currency} />
-        ))}
-      </datalist>
-    </>
-  );
+  return <CurrencySelect name={name} defaultValue={value} required />;
 }
 
 function BillCreateForm({

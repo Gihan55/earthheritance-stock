@@ -26,19 +26,8 @@ import type {
 import { formatDate, formatMoney, formatQty, purchaseStatus } from "@/lib/format";
 import { Badge, EmptyState } from "./ui";
 import { Modal } from "./client-modal";
+import { CurrencySelect } from "./currency";
 import { Feedback, PreviewNote, SubmitButton } from "./forms";
-
-const CURRENCIES = [
-  "USD",
-  "LKR",
-  "INR",
-  "EUR",
-  "GBP",
-  "AED",
-  "AUD",
-  "CAD",
-  "SGD",
-];
 
 type SupplierFormValues = Partial<SupplierDetail["supplier"]> & {
   id?: string;
@@ -141,20 +130,11 @@ function SupplierFields({
         </label>
         <label>
           Preferred currency
-          <input
+          <CurrencySelect
             name="preferred_currency"
             defaultValue={values.preferred_currency}
-            list="currency-list"
-            maxLength={3}
-            minLength={3}
-            pattern="[A-Za-z]{3}"
-            placeholder="USD"
+            includeBlank
           />
-          <datalist id="currency-list">
-            {CURRENCIES.map((currency) => (
-              <option key={currency} value={currency} />
-            ))}
-          </datalist>
         </label>
         <label className="full-width">
           Notes

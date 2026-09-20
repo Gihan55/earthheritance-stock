@@ -10,6 +10,7 @@ import {
 import { INITIAL_STATE } from "@/lib/validation";
 import type { PurchaseLineRow } from "@/lib/records";
 import { formatQty } from "@/lib/format";
+import { CurrencySelect } from "./currency";
 import { Modal } from "./client-modal";
 import { Feedback, PreviewNote, SubmitButton } from "./forms";
 
@@ -141,15 +142,12 @@ export function PurchaseForm({
             </label>
             <label>
               Currency <span className="required">*</span>
-              <input
+              <CurrencySelect
                 name="currency"
                 value={currency}
                 onChange={(event) =>
-                  setCurrencyOverride(event.target.value.toUpperCase())
+                  setCurrencyOverride(event.target.value)
                 }
-                maxLength={3}
-                minLength={3}
-                pattern="[A-Za-z]{3}"
                 required
               />
             </label>

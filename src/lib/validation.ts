@@ -35,6 +35,16 @@ export const accessSchema = z.object({
   role: z.enum(ROLES),
   is_active: z.enum(["true", "false"]).transform((value) => value === "true"),
 });
+export const staffPasswordResetSchema = z
+  .object({
+    user_id: z.uuid(),
+    password: z.string().min(12, "Use at least 12 characters.").max(128),
+    confirmPassword: z.string(),
+  })
+  .refine((value) => value.password === value.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
 export const companySchema = z.object({
   name: z.string().trim().min(2, "Enter your company name.").max(160),
   email: z

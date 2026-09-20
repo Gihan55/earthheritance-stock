@@ -38,11 +38,11 @@ import {
   shipmentStatus,
 } from "@/lib/format";
 import { Badge, EmptyState } from "./ui";
+import { CurrencySelect } from "./currency";
 import { Modal } from "./client-modal";
 import { Feedback, PreviewNote, SubmitButton } from "./forms";
 import { LineEditor } from "./purchasing-ui";
 
-const CURRENCIES = ["USD", "LKR", "INR", "EUR", "GBP", "AED", "AUD", "CAD", "SGD"];
 type BuyerOption = {
   id: string;
   code: string;
@@ -189,15 +189,10 @@ export function ExportOrderCreate({
             </label>
             <label>
               Currency <span className="required">*</span>
-              <input
+              <CurrencySelect
                 name="currency"
                 value={currency}
-                onChange={(event) =>
-                  setCurrencyOverride(event.target.value.toUpperCase())
-                }
-                maxLength={3}
-                minLength={3}
-                pattern="[A-Za-z]{3}"
+                onChange={(event) => setCurrencyOverride(event.target.value)}
                 required
               />
             </label>
@@ -958,20 +953,11 @@ export function InvoiceCreate({
             </label>
             <label>
               Currency <span className="required">*</span>
-              <input
+              <CurrencySelect
                 name="currency"
                 defaultValue={detail.order.currency}
-                list="invoice-currency-list"
-                maxLength={3}
-                minLength={3}
-                pattern="[A-Za-z]{3}"
                 required
               />
-              <datalist id="invoice-currency-list">
-                {CURRENCIES.map((currency) => (
-                  <option key={currency} value={currency} />
-                ))}
-              </datalist>
             </label>
             <label>
               Exchange rate

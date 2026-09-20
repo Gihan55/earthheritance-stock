@@ -141,7 +141,13 @@ npm run seed:demo      # opt-in demo data against the configured project
    re-invited.
 4. Change roles or deactivate anyone from **Team** at any time; deactivation
    preserves all historical records and cuts access immediately.
-5. Adjust what a role can do from **Roles** (administrator permissions are
+5. Passwords: every signed-in user changes their own from the account menu →
+   **Change password** (`/account/password`). If a colleague is locked out,
+   an administrator can set a new password for them from **Team** →
+   **Reset password** (the action requires `users.manage`, refuses to reset
+   the last active administrator, invalidates the member's sessions, and is
+   recorded in the audit log as `staff.password_reset`).
+6. Adjust what a role can do from **Roles** (administrator permissions are
    protected and always full).
 
 ## 9. Deploying to Vercel

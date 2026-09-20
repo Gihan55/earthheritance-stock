@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 import type { StaffProfile } from "@/lib/workspace";
 import { initials, ROLE_LABELS, ROLES } from "@/lib/permissions";
 import { Badge, EmptyState } from "./ui";
-import { StaffAccessForm } from "./forms";
+import { StaffAccessForm, StaffPasswordResetForm } from "./forms";
 
 export function TeamDirectory({
   staff,
@@ -102,12 +102,15 @@ export function TeamDirectory({
                   adminCount === 1
                 }
               />
+              {!preview && <StaffPasswordResetForm profile={member} preview={preview} />}
             </div>
           ))}
         </div>
       )}
       <div className="panel-footnote">
-        Deactivating a staff member preserves their historical records.
+        Deactivating a staff member preserves their historical records. Use
+        Reset password only when a colleague needs access restored right away;
+        everyone can also change their own password from the account menu.
       </div>
     </section>
   );

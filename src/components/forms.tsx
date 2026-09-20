@@ -17,6 +17,7 @@ import {
 import {
   changePassword,
   inviteStaff,
+  resetStaffPassword,
   saveCompany,
   signIn,
   updateStaffAccess,
@@ -25,6 +26,7 @@ import {
 import { INITIAL_STATE, type ActionState } from "@/lib/validation";
 import { ROLE_LABELS, ROLES } from "@/lib/permissions";
 import type { Company, Invitation, StaffProfile } from "@/lib/workspace";
+import { CurrencySelect } from "./currency";
 
 export function Feedback({ state }: { state: ActionState }) {
   if (!state.message) return null;
@@ -235,34 +237,15 @@ export function CompanyForm({
         </label>
         <label>
           Base currency <span className="required">*</span>
-          <input
+          <CurrencySelect
             name="base_currency"
-            defaultValue={company?.base_currency}
-            list="currency-list"
+            defaultValue={company?.base_currency ?? "USD"}
             required
-            minLength={3}
-            maxLength={3}
-            pattern="[A-Za-z]{3}"
-            placeholder="Select or enter a code"
           />
-          <datalist id="currency-list">
-            {[
-              "USD",
-              "LKR",
-              "INR",
-              "EUR",
-              "GBP",
-              "AED",
-              "AUD",
-              "CAD",
-              "SGD",
-            ].map((currency) => (
-              <option key={currency} value={currency} />
-            ))}
-          </datalist>
           <small>
-            Three-letter currency code. Foreign-currency transactions will
-            retain their original amounts.
+            Your reporting currency. Supplier payments are usually LKR, while
+            export orders and invoices are USD or other foreign currencies.
+            Foreign-currency transactions retain their original amounts.
           </small>
         </label>
       </div>
@@ -410,6 +393,79 @@ export function StaffAccessForm({
         <small>Last active administrator — access is protected.</small>
       )}
       <Feedback state={state} />
+    </form>
+  );
+}
+export function StaffPasswordResetForm({
+  profile,
+  preview,
+}: {
+  profile: StaffProfile;
+  preview: boolean;
+}) {
+  const [state, action, pending] = useActionState(
+    resetStaffPassword,
+    INITIAL_STATE,
+  );
+  const [open, setOpen] = useState(false);
+  if (!open)
+    return (
+      <button
+        type="button"
+        className="button button-ghost button-small"
+        disabled={preview}
+        onClick={() => setOpen(true)}
+      >
+        Reset password
+      </button>
+    );
+  return (
+    <form action={action} className="staff-password-form">
+      <input type="hidden" name="user_id" value={profile.id} />
+      <div className="staff-password-fields">
+        <label>
+          New password for {profile.full_name}
+          <input
+            type="password"
+            name="password"
+            minLength={12}
+            maxLength={128}
+            required
+            autoComplete="new-password"
+            placeholder="At least 12 characters"
+          />
+        </label>
+        <label>
+          Confirm password
+          <input
+            type="password"
+            name="confirmPassword"
+            minLength={12}
+            maxLength={128}
+            required
+            autoComplete="new-password"
+          />
+        </label>
+      </div>
+      <p className="form-note">
+        <ShieldCheck size={16} />
+        The staff member is signed out everywhere and must use the new password
+        to return. They can change it again from Account security.
+      </p>
+      <Feedback state={state} />
+      <div className="staff-access-controls">
+        <SubmitButton pending={pending} disabled={preview}>
+          Save password
+        </SubmitButton>
+        <button
+          type="button"
+          className="button button-secondary button-small"
+          disabled={pending}
+          onClick={() => setOpen(false)}
+        >
+          Cancel
+        </button>
+      </div>
     </form>
   );
 }

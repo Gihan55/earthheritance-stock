@@ -42,6 +42,7 @@ import {
   shipmentIdSchema,
   shipmentSchema,
   signInSchema,
+  staffPasswordResetSchema,
   supplierIdSchema,
   supplierPaymentRecordSchema,
   supplierPaymentSchema,
@@ -321,6 +322,58 @@ export async function updateStaffAccess(
     });
     rpcError(error);
     return "Staff access updated.";
+  });
+}
+export async function resetStaffPassword(
+  _previous: ActionState,
+  form: FormData,
+) {
+  return perform("users.manage", async (db) => {
+    const input = staffPasswordResetSchema.parse(Object.fromEntries(form));
+    if (!process.env.SUPABASE_SECRET_KEY)
+      throw new ActionError(
+        "Set the server-side Supabase secret key to reset staff passwords.",
+      );
+    // The target must be an enrolled profile, not an arbitrary auth user.
+    const { data: target, error: lookupError } = await db
+      .from("profiles")
+      .select("id, full_name, role, is_active")
+      .eq("id", input.user_id)
+      .maybeSingle();
+    if (lookupError) rpcError(lookupError);
+    if (!target)
+      throw new ActionError(
+        "Staff member not found. Reset a password after their invitation is accepted.",
+      );
+    // Never let a password reset lock out the last active administrator.
+    if (target.role === "administrator" && target.is_active) {
+      const { count, error: countError } = await db
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "administrator")
+        .eq("is_active", true);
+      if (countError) rpcError(countError);
+      if ((count ?? 0) <= 1)
+        throw new ActionError(
+          "The last active administrator must change their own password from Account security.",
+        );
+    }
+    const { error } = await createAdminSupabase().auth.admin.updateUserById(
+      input.user_id,
+      { password: input.password },
+    );
+    if (error)
+      throw new ActionError(
+        "The password could not be reset. Check that the account still exists in Supabase Auth.",
+      );
+    // Supabase invalidates the staff member's sessions when the password changes.
+    const { error: auditError } = await db.rpc("app_log_audit", {
+      p_action: "staff.password_reset",
+      p_target: input.user_id,
+      p_details: { name: target.full_name },
+    });
+    if (auditError) rpcError(auditError);
+    return `Password updated for ${target.full_name}. They must sign in again.`;
   });
 }
 export async function saveRolePermissions(
