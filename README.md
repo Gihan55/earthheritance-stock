@@ -163,8 +163,13 @@ npm run seed:demo      # opt-in demo data against the configured project
    | `NEXT_PUBLIC_SITE_URL` | `https://earthheritance-stock-manage.vercel.app` |
 
 3. Keep Supabase's Site URL / redirect list pointed at the HTTPS domain.
-4. `git push` → Vercel auto-deploys. `NEXT_PUBLIC_*` values are baked in at
-   build time, so changing them requires a redeploy.
+4. Branch flow and release control: work lands on `feature/*` branches, then
+   merges through `dev` → `preview` → `main`. In Vercel, turn **off**
+   "Create deployments for connected branches" (Settings → Git) so feature,
+   dev, and preview pushes never build; only merging into `main` (the
+   production branch) deploys. A dashboard **Redeploy** re-publishes the same
+   commit on demand. `NEXT_PUBLIC_*` values are baked in at build time, so
+   changing them requires a redeploy.
 
 ## 10. Data conventions
 
