@@ -24,6 +24,8 @@ import {
   buyerSchema,
   companySchema,
   dispatchSchema,
+  documentRegisterSchema,
+  documentRemoveSchema,
   exportOrderIdSchema,
   exportOrderSchema,
   inviteSchema,
@@ -46,6 +48,7 @@ import {
   supplierSchema,
   type ActionState,
 } from "@/lib/validation";
+import { DOCUMENT_ENTITIES, isDocumentEntity } from "@/lib/records";
 
 class ActionError extends Error {}
 const fail = (message: string): ActionState => ({ success: false, message });
@@ -144,6 +147,12 @@ function rpcError(error: { message: string } | null) {
     "Allocation amount must be greater than zero",
     "This payment has already been reversed",
     "Payment amount must be greater than zero",
+    "Not authorized for this document type",
+    "File path must match the record it is attached to",
+    "Documents must be between 1 byte and 10 MB",
+    "Unsupported file type",
+    "Record not found",
+    "Document not found",
   ];
   throw new ActionError(
     safeMessages.includes(error.message) ||
@@ -920,3 +929,61 @@ export async function reverseBuyerReceipt(
     return "Receipt reversed and allocations released.";
   });
 }
+
+function documentPermission(form: FormData): Permission | null {
+  const entity = String(form.get("entity_type") ?? "");
+  return isDocumentEntity(entity) ? DOCUMENT_ENTITIES[entity].manage : null;
+}
+export async function attachDocument(
+  _previous: ActionState,
+  form: FormData,
+) {
+  const permission = documentPermission(form);
+  if (!permission) return fail("Unknown document record.");
+  return perform(permission, async (db) => {
+    const input = documentRegisterSchema.parse(Object.fromEntries(form));
+    if (!process.env.SUPABASE_SECRET_KEY)
+      throw new ActionError(
+        "Document storage requires the server-side Supabase secret key.",
+      );
+    // Confirm the browser really uploaded this object to the private bucket.
+    const folder = `${input.entity_type}/${input.entity_id}/`;
+    if (!input.file_path.startsWith(folder))
+      throw new ActionError("The uploaded file does not match this record.");
+    const objectName = input.file_path.slice(folder.length);
+    const { data: listing, error: listError } =
+      await createAdminSupabase().storage
+        .from("attachments")
+        .list(folder, { limit: 1000 });
+    if (listError || !listing?.some((file) => file.name === objectName))
+      throw new ActionError(
+        "The uploaded file was not found. Check your connection and upload it again.",
+      );
+    const { error } = await db.rpc("app_register_document", {
+      p_entity_type: input.entity_type,
+      p_entity_id: input.entity_id,
+      p_title: input.title,
+      p_category: input.category,
+      p_file_path: input.file_path,
+      p_file_name: input.file_name,
+      p_file_size_bytes: input.file_size_bytes,
+      p_mime_type: input.mime_type,
+    });
+    rpcError(error);
+    return "Document attached.";
+  });
+}
+export async function removeDocument(
+  _previous: ActionState,
+  form: FormData,
+) {
+  const permission = documentPermission(form);
+  if (!permission) return fail("Unknown document record.");
+  return perform(permission, async (db) => {
+    const input = documentRemoveSchema.parse(Object.fromEntries(form));
+    const { error } = await db.rpc("app_remove_document", { p_id: input.id });
+    rpcError(error);
+    return "Document removed.";
+  });
+}
+

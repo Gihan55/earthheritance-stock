@@ -468,6 +468,11 @@ export function SupplierPaymentsBoard({
                     <tr key={bill.id}>
                       <td>
                         <span className="primary">{bill.code}</span>
+                        <span className="sub">
+                          <Link href={`/modules/files/supplier_bill/${bill.id}`}>
+                            Files
+                          </Link>
+                        </span>
                       </td>
                       <td>{bill.supplier_name}</td>
                       <td>{formatDate(bill.due_date)}</td>
@@ -537,6 +542,13 @@ export function SupplierPaymentsBoard({
                     <tr key={payment.id}>
                       <td>
                         <span className="primary">{payment.code}</span>
+                        <span className="sub">
+                          <Link
+                            href={`/modules/files/supplier_payment/${payment.id}`}
+                          >
+                            Files
+                          </Link>
+                        </span>
                       </td>
                       <td>{payment.supplier_name}</td>
                       <td>{formatDate(payment.payment_date)}</td>
@@ -810,6 +822,13 @@ export function BuyerReceiptsBoard({
                         >
                           {invoice.code}
                         </Link>
+                        <span className="sub">
+                          <Link
+                            href={`/modules/files/export_invoice/${invoice.id}`}
+                          >
+                            Files
+                          </Link>
+                        </span>
                       </td>
                       <td>{invoice.buyer_name ?? "—"}</td>
                       <td>{formatDate(invoice.due_date)}</td>
@@ -879,6 +898,11 @@ export function BuyerReceiptsBoard({
                     <tr key={receipt.id}>
                       <td>
                         <span className="primary">{receipt.code}</span>
+                        <span className="sub">
+                          <Link href={`/modules/files/buyer_receipt/${receipt.id}`}>
+                            Files
+                          </Link>
+                        </span>
                       </td>
                       <td>{receipt.buyer_name}</td>
                       <td>{formatDate(receipt.receipt_date)}</td>

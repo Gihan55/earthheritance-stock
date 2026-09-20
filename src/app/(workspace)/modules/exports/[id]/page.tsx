@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import { FolderLock } from "lucide-react";
 import { requirePermission } from "@/lib/workspace";
 import { getExportOrder, getLotBalances } from "@/lib/records";
 import { can } from "@/lib/permissions";
@@ -36,6 +38,9 @@ export default async function ExportOrderPage({
         description={`${detail.order.buyer?.name ?? "Buyer"} · ${detail.order.currency}`}
       >
         <Badge tone={badge.tone}>{badge.label}</Badge>
+        <Link className="button button-ghost" href={`/modules/files/export_order/${id}`}>
+          <FolderLock size={15} /> Files
+        </Link>
       </PageHeading>
       {canManage && !actor.preview && (
         <div className="section-spacer">

@@ -384,3 +384,41 @@ export const allocateReceiptSchema = z.object({
   invoice_id: z.uuid(),
   amount: positiveNumber("Allocation amount"),
 });
+export const documentEntityField = z.enum([
+  "purchase",
+  "goods_receipt",
+  "export_order",
+  "shipment",
+  "export_invoice",
+  "supplier_bill",
+  "supplier_payment",
+  "buyer_receipt",
+]);
+export const documentRegisterSchema = z.object({
+  entity_type: documentEntityField,
+  entity_id: z.uuid(),
+  title: z.string().trim().min(2, "A document title is required").max(120),
+  category: z.enum([
+    "certificate",
+    "transport",
+    "payment_evidence",
+    "tax",
+    "photo",
+    "other",
+  ]),
+  file_path: z.string().min(10).max(500),
+  file_name: z.string().min(1).max(200),
+  file_size_bytes: z.coerce.number().int().min(1).max(10485760),
+  mime_type: z.enum([
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ]),
+});
+export const documentRemoveSchema = z.object({
+  id: z.uuid(),
+  entity_type: documentEntityField,
+});

@@ -52,6 +52,7 @@ beforeAll(async () => {
     "../supabase/migrations/0005_reporting.sql",
 "../supabase/migrations/0006_performance.sql",
 "../supabase/migrations/0007_register_references.sql",
+"../supabase/migrations/0008_documents.sql",
   ])
     await db.exec(await readFile(new URL(migration, import.meta.url), "utf8"));
   for (const [role, id] of Object.entries(ids))

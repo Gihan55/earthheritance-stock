@@ -833,6 +833,11 @@ export function ShipmentsPanel({
                           ? `Dispatched ${formatDate(shipment.dispatched_on)}`
                           : `ETD ${formatDate(shipment.etd)}`}
                       </span>
+                      <span className="sub">
+                        <Link href={`/modules/files/shipment/${shipment.id}`}>
+                          Files
+                        </Link>
+                      </span>
                     </td>
                     <td>
                       {shipment.container_number || "—"}
@@ -1116,6 +1121,13 @@ export function InvoicesPanel({
                       >
                         {invoice.code}
                       </Link>
+                      <span className="sub">
+                        <Link
+                          href={`/modules/files/export_invoice/${invoice.id}`}
+                        >
+                          Files
+                        </Link>
+                      </span>
                     </td>
                     <td>{formatDate(invoice.issue_date)}</td>
                     <td>{formatDate(invoice.due_date)}</td>

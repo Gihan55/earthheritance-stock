@@ -2041,3 +2041,78 @@ export async function getPackingList(
   };
 }
 
+// ---- Private supporting documents (attachments bucket) -----------------------
+// Each record type maps to the permission that may view or attach files.
+export const DOCUMENT_ENTITIES = {
+  purchase: { label: "Purchase order", read: "inventory.view", manage: "purchasing.manage" },
+  goods_receipt: { label: "Goods receipt", read: "inventory.view", manage: "purchasing.manage" },
+  export_order: { label: "Export order", read: "exports.view", manage: "exports.manage" },
+  shipment: { label: "Shipment", read: "exports.view", manage: "exports.manage" },
+  export_invoice: { label: "Commercial invoice", read: "exports.view", manage: "exports.manage" },
+  supplier_bill: { label: "Supplier bill", read: "finance.view", manage: "finance.manage" },
+  supplier_payment: { label: "Supplier payment", read: "finance.view", manage: "finance.manage" },
+  buyer_receipt: { label: "Buyer receipt", read: "finance.view", manage: "finance.manage" },
+} as const satisfies Record<
+  string,
+  { label: string; read: Permission; manage: Permission }
+>;
+export type DocumentEntity = keyof typeof DOCUMENT_ENTITIES;
+export const DOCUMENT_CATEGORIES = [
+  "certificate",
+  "transport",
+  "payment_evidence",
+  "tax",
+  "photo",
+  "other",
+] as const;
+export function isDocumentEntity(value: string): value is DocumentEntity {
+  return Object.hasOwn(DOCUMENT_ENTITIES, value);
+}
+export type DocumentRow = {
+  id: string;
+  title: string;
+  category: string;
+  file_name: string;
+  file_size_bytes: string;
+  mime_type: string;
+  created_at: string;
+  uploaded_by_name: string | null;
+};
+
+export async function listDocuments(
+  entity: DocumentEntity,
+  entityId: string,
+): Promise<DocumentRow[]> {
+  const ctx = await guard(DOCUMENT_ENTITIES[entity].read);
+  if (!ctx) return [];
+  const { data, error } = await ctx.db
+    .from("documents")
+    .select("id,title,category,file_name,file_size_bytes,mime_type,created_at, uploader:profiles!documents_uploaded_by_fkey(full_name)")
+    .eq("entity_type", entity)
+    .eq("entity_id", entityId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error("Documents could not be loaded.");
+  return (data ?? []).map((row) => {
+    const { uploader, ...rest } = row as unknown as DocumentRow & {
+      uploader: { full_name: string } | null;
+    };
+    return { ...rest, uploaded_by_name: uploader?.full_name ?? null };
+  });
+}
+
+// RLS restricts the row to document types the signed-in user may read, so a
+// successful lookup is itself the download authorization check.
+export async function getDocumentById(id: string) {
+  const ctx = await session();
+  if (!ctx) return null;
+  const { data } = await ctx.db
+    .from("documents")
+    .select("id,entity_type,file_path,file_name,mime_type")
+    .eq("id", id)
+    .maybeSingle();
+  return data as
+    | { id: string; entity_type: DocumentEntity; file_path: string; file_name: string; mime_type: string }
+    | null;
+}
+
+

@@ -11,3 +11,5 @@ overview-browser-*.png
 *.log
 
 supabase/.temp/
+
+.vercel-tmp/

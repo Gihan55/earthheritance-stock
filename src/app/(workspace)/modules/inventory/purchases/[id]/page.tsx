@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import { FolderLock } from "lucide-react";
 import { requirePermission } from "@/lib/workspace";
 import { getPurchaseDetail } from "@/lib/records";
 import { PageHeading } from "@/components/ui";
@@ -27,7 +29,11 @@ export default async function PurchaseDetailPage({
         eyebrow="PURCHASE ORDER"
         title={detail.purchase.code}
         description={detail.purchase.supplier?.name ?? "Supplier"}
-      />
+      >
+        <Link className="button button-ghost" href={`/modules/files/purchase/${id}`}>
+          <FolderLock size={15} /> Files
+        </Link>
+      </PageHeading>
       <InventoryNav
         pathname="/modules/inventory/purchases"
         permissions={actor.permissions}

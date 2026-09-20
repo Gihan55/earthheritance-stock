@@ -400,6 +400,13 @@ export function ReceiptHistory({ receipts }: { receipts: ReceiptRow[] }) {
                 <tr key={receipt.id}>
                   <td>
                     <span className="primary">{receipt.code}</span>
+                    <span className="sub">
+                      <Link
+                        href={`/modules/files/goods_receipt/${receipt.id}`}
+                      >
+                        Files
+                      </Link>
+                    </span>
                   </td>
                   <td>{formatDate(receipt.receipt_date)}</td>
                   <td>{receipt.supplier_reference || "—"}</td>
