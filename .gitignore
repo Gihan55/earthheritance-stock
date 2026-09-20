@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+coverage/
+.env*
+!.env.example
+*.tsbuildinfo
+next-env.d.ts
+.vercel/
+overview-browser-*.png
+*.log
+
+supabase/.temp/
