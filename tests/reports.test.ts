@@ -164,6 +164,7 @@ beforeAll(async () => {
 "../supabase/migrations/0006_performance.sql",
 "../supabase/migrations/0007_register_references.sql",
 "../supabase/migrations/0008_documents.sql",
+"../supabase/migrations/0009_staff_password_audit.sql",
   ])
     await db.exec(await readFile(new URL(migration, import.meta.url), "utf8"));
   for (const [role, id] of Object.entries(ids))

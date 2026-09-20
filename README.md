@@ -121,7 +121,7 @@ npm run seed:demo      # opt-in demo data against the configured project
 2. Run migrations **in order** in SQL Editor (or `supabase db push`):
    `0001_foundation` → `0002_suppliers_stock` → `0003_production` →
    `0004_exports_finance` → `0005_reporting` → `0006_performance` →
-   `0007_register_references` → `0008_documents`.
+   `0007_register_references` → `0008_documents` → `0009_staff_password_audit`.
 3. Authentication → URL Configuration: set **Site URL** to the app origin and
    add `<origin>/auth/callback` as a redirect URL. Disable public sign-ups.
    Set minimum password length 12. Configure SMTP for invitation emails.

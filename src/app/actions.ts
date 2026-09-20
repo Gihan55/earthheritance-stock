@@ -154,6 +154,8 @@ function rpcError(error: { message: string } | null) {
     "Unsupported file type",
     "Record not found",
     "Document not found",
+    "Staff member not found",
+    "Change your own password from Account security",
   ];
   throw new ActionError(
     safeMessages.includes(error.message) ||
@@ -366,12 +368,13 @@ export async function resetStaffPassword(
       throw new ActionError(
         "The password could not be reset. Check that the account still exists in Supabase Auth.",
       );
-    // Supabase invalidates the staff member's sessions when the password changes.
-    const { error: auditError } = await db.rpc("app_log_audit", {
-      p_action: "staff.password_reset",
-      p_target: input.user_id,
-      p_details: { name: target.full_name },
-    });
+    // Supabase invalidates the staff member's sessions when the password
+    // changes. The audit RPC re-checks users.manage and records the event;
+    // app_log_audit itself is not callable from browser sessions.
+    const { error: auditError } = await db.rpc(
+      "app_log_staff_password_reset",
+      { p_target_user: input.user_id },
+    );
     if (auditError) rpcError(auditError);
     return `Password updated for ${target.full_name}. They must sign in again.`;
   });
