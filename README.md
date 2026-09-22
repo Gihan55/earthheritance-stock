@@ -8,6 +8,13 @@ and receipt — plus their supporting paperwork — in one permission-aware syst
 Live app: https://earthheritance-stock-manage.vercel.app
 Repository: https://github.com/Gihan55/earthheritance-stock
 
+Full documentation:
+
+- [System Document](./docs/system-document.md) — architecture, data model,
+  security, currencies, files, deployment, testing, troubleshooting.
+- [User Guide](./docs/user-guide.md) — step-by-step instructions for each
+  role (stores, production, export sales, finance, managers, admins).
+
 ---
 
 ## 1. Technology
