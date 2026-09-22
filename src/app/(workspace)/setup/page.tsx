@@ -48,17 +48,27 @@ export default async function SetupPage() {
                 Prepare your Supabase project
               </h2>
               <p>
-                Create a Supabase project, then run the foundation migration in
-                its SQL editor:
+                Create a Supabase project, then run every migration in its SQL
+                editor, in this exact order:
               </p>
-              <code className="code-block">
-                supabase/migrations/0001_foundation.sql
-              </code>
+              <pre
+                className="code-block"
+              >{`supabase/migrations/0001_foundation.sql
+supabase/migrations/0002_suppliers_stock.sql
+supabase/migrations/0003_production.sql
+supabase/migrations/0004_exports_finance.sql
+supabase/migrations/0005_reporting.sql
+supabase/migrations/0006_performance.sql
+supabase/migrations/0007_register_references.sql
+supabase/migrations/0008_documents.sql
+supabase/migrations/0009_staff_password_audit.sql`}</pre>
               <p>
-                This creates profiles, six access levels, permissions, company
-                settings, invitation handling, audit records, and row-level
-                security. It does not create business stock or payment tables
-                yet.
+                Together these create profiles, six access levels, permissions,
+                company settings, invitation handling, audit records and
+                row-level security; then the stock, production, export and
+                finance tables, reporting views, performance indexes, the
+                private attachments bucket for supporting documents, and the
+                staff password-reset audit trail.
               </p>
             </div>
           </section>
