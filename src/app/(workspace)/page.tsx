@@ -28,28 +28,35 @@ import { MODULES, moduleHref } from "@/lib/modules";
 export default async function OverviewPage() {
   const actor = await requireActor();
   const company = await getCompany();
-  const staff = can(actor.permissions, "users.manage") ? await getStaff() : [];
-  const activity = can(actor.permissions, "audit.view")
-    ? await getAuditEvents()
-    : [];
   const modules = MODULES.filter((module) =>
     can(actor.permissions, module.permission),
   );
-  const stock = can(actor.permissions, "inventory.view")
-    ? await getStockTotals()
-    : null;
-  const production = can(actor.permissions, "production.view")
-    ? await getProductionTotals()
-    : null;
-  const exportsTotals = can(actor.permissions, "exports.view")
-    ? await getExportTotals()
-    : null;
-  const payables = can(actor.permissions, "finance.view")
-    ? await getPayablesTotals()
-    : null;
-  const receivables = can(actor.permissions, "finance.view")
-    ? await getReceivablesTotals()
-    : null;
+  // These reads are independent; fetch them concurrently so the page costs the
+  // slowest query plus one round-trip instead of the sum of all of them. Each
+  // getter internally redirects when its permission is missing, so only call it
+  // when the actor actually holds that permission (mirrors the prior guards).
+  const [staff, activity, stock, production, exportsTotals, payables, receivables] =
+    await Promise.all([
+      can(actor.permissions, "users.manage") ? getStaff() : Promise.resolve([]),
+      can(actor.permissions, "audit.view")
+        ? getAuditEvents()
+        : Promise.resolve([]),
+      can(actor.permissions, "inventory.view")
+        ? getStockTotals()
+        : Promise.resolve(null),
+      can(actor.permissions, "production.view")
+        ? getProductionTotals()
+        : Promise.resolve(null),
+      can(actor.permissions, "exports.view")
+        ? getExportTotals()
+        : Promise.resolve(null),
+      can(actor.permissions, "finance.view")
+        ? getPayablesTotals()
+        : Promise.resolve(null),
+      can(actor.permissions, "finance.view")
+        ? getReceivablesTotals()
+        : Promise.resolve(null),
+    ]);
   const setup = [
     {
       label: "Connect your workspace",
