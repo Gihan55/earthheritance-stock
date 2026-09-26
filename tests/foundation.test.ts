@@ -297,6 +297,31 @@ describe("foundation migration and authorization", () => {
       (await db.query("select * from public.staff_invitations")).rows,
     ).toHaveLength(0);
   });
+  it("enrolls directly created members the same as invited staff", async () => {
+    const newId = "22222222-2222-4222-8222-222222222222";
+    await actAs("administrator");
+    await db.exec(
+      "select public.app_prepare_invitation('direct@example.com', 'Direct Member', 'finance')",
+    );
+    await db.exec("reset role");
+    // The admin createUser(email_confirm: true) call inserts a fully registered
+    // auth user, which the same enrollment trigger picks up by email.
+    await db.query(
+      "insert into auth.users(id, email) values ($1, 'direct@example.com')",
+      [newId],
+    );
+    expect(
+      (
+        await db.query(
+          "select role, email from public.profiles where id = $1",
+          [newId],
+        )
+      ).rows,
+    ).toEqual([{ role: "finance", email: "direct@example.com" }]);
+    expect(
+      (await db.query("select * from public.staff_invitations")).rows,
+    ).toHaveLength(0);
+  });
   it("does not grant access to uninvited auth users", async () => {
     const newId = "22222222-2222-4222-8222-222222222222";
     await db.query(

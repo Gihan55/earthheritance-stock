@@ -61,7 +61,8 @@ supabase/migrations/0005_reporting.sql
 supabase/migrations/0006_performance.sql
 supabase/migrations/0007_register_references.sql
 supabase/migrations/0008_documents.sql
-supabase/migrations/0009_staff_password_audit.sql`}</pre>
+supabase/migrations/0009_staff_password_audit.sql
+supabase/migrations/0010_rls_plan_stability.sql`}</pre>
               <p>
                 Together these create profiles, six access levels, permissions,
                 company settings, invitation handling, audit records and
@@ -110,8 +111,10 @@ supabase/migrations/0009_staff_password_audit.sql`}</pre>
                   redirect settings.
                 </li>
                 <li>
-                  Configure SMTP before sending staff invitations; default email
-                  delivery has restrictions.
+                  Configure SMTP before sending staff invitations by email;
+                  default email delivery has restrictions. Skipping SMTP is
+                  possible if you only add members from Team with a password you
+                  set yourself.
                 </li>
                 <li>
                   Set a minimum password length of 12 and configure appropriate
@@ -150,7 +153,8 @@ supabase/migrations/0009_staff_password_audit.sql`}</pre>
               <p>
                 This one-time function is blocked for browser users and refuses
                 to run after initialization. Then sign in, save your company
-                settings, and invite staff from Team members.
+                settings, and add colleagues from Team members — by email
+                invitation, or directly with a password you set for them.
               </p>
               <Link href="/login" className="button button-primary">
                 Open sign-in <ArrowRight size={16} />

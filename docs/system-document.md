@@ -62,8 +62,9 @@ Key rules:
   `public.app_has_permission(...)` inside the database — the server action
   check is defense in depth, not the only gate.
 - The service-role client (`createAdminSupabase`) is used in exactly three
-  places: sending invitations, verifying/resetting passwords via the Auth
-  admin API, and confirming/mounting uploaded Storage objects.
+places: managing Auth accounts (sending invitations, creating accounts
+  directly, resetting passwords), and confirming/mounting uploaded Storage
+  objects.
 - `records.ts` starts with `import "server-only"`; client components may
   only `import type` from it (vitest aliases `server-only` to a stub).
 
@@ -86,7 +87,7 @@ src/
     validation.ts         zod schemas for every server action
     workspace.ts          getActor / requirePermission / getStaff
     supabase/             client factories (browser / server / admin)
-supabase/migrations/      0001…0009, applied in order (see §6)
+supabase/migrations/      0001…0010, applied in order (see §6)
 tests/                    Vitest + PGlite integration suites
 scripts/seed-demo.mjs     opt-in demo data seeder
 docs/                     this document + user guide
@@ -112,13 +113,13 @@ docs/                     this document + user guide
 | `/modules/documents/packing/[id]` | Printable packing list | `exports.view` |
 | `/modules/files/[entity]/[id]` | Supporting-document upload/list per record | entity read permission |
 | `/attachments/[id]` | Download: RLS check → 30 s signed URL | document owner check |
-| `/team` | Invite staff, roles, activate/deactivate, password reset | `users.manage` |
+| `/team` | Invite staff, add members without email, roles, activate/deactivate, password reset | `users.manage` |
 | `/roles` | Edit role → permission assignments | `roles.manage` |
 | `/settings` | Company profile, base currency, warehouse | `settings.manage` |
 | `/account/password` | Self-service password change | any signed-in user |
 | `/setup` | Guided administrator setup checklist | `administrator` |
 
-## 6. Data model (migrations 0001–0009)
+## 6. Data model (migrations 0001–0010)
 
 | Migration | Contents |
 |---|---|
@@ -131,6 +132,7 @@ docs/                     this document + user guide
 | `0007_register_references` | Payment/receipt balance views expose method + reference for register filtering |
 | `0008_documents` | `documents` table (entity whitelist, 10 MB, mime whitelist, path regex), `app_document_read_ok`/`write_ok`, `app_register_document`, `app_remove_document`, private `attachments` bucket + path-scoped storage policies |
 | `0009_staff_password_audit` | `app_log_staff_password_reset(uuid)` — audit RPC for admin password resets (see §12) |
+| `0010_rls_plan_stability` | Wraps row-independent RLS permission checks in a scalar sub-select so each policy is evaluated once per query (not per row), plus an `export_reservations(order_line_id)` index — benchmark-proven ~11x faster aggregate/register queries |
 
 Status enums (lifecycle states):
 
@@ -259,6 +261,14 @@ recorded/allocated/reversed, `document.added`, `document.removed`,
   `inviteUserByEmail`; a trigger on `auth.users` inserts the profile with
   the invited role if the user appears within 24 h of a pending invitation.
   Requires SMTP configured in Supabase Auth.
+- **Adding a member without email** (no SMTP needed): `/team` →
+  "Add without email" → `addStaffMember` calls the same
+  `app_prepare_invitation` RPC (which rejects duplicate emails and carries
+  the role) and then the service-role Auth admin `createUser` with
+  `email_confirm: true`. The resulting user is fully registered with the
+  administrator-set password, so the enrollment trigger creates the profile
+  exactly as for an invited user and no email is ever sent. If the Auth call
+  fails, the pending invitation record is cancelled again.
 - **Passwords**: minimum 12 characters. Self-service change at
   `/account/password` (revokes other sessions). Admin reset on `/team`
   (requires `users.manage`): the action checks the target profile via RLS,
@@ -281,9 +291,11 @@ Required environment variables:
 | `SUPABASE_SECRET_KEY` | server-only | service-role key (invites, storage checks, password reset) |
 | `NEXT_PUBLIC_SITE_URL` | public | HTTPS origin used in invitation redirects |
 
-Supabase side: run migrations 0001→0009 **in order**; Auth → Site URL = app
+Supabase side: run migrations 0001→0010 **in order**; Auth → Site URL = app
 origin, redirect `<origin>/auth/callback`, disable public sign-up, minimum
-password length 12; SMTP configured for invitations.
+password length 12.
+SMTP is required for invitations only. Adding a member without email needs no
+SMTP, just `SUPABASE_SECRET_KEY`.
 
 ## 14. Deployment
 
@@ -302,7 +314,7 @@ password length 12; SMTP configured for invitations.
 
 ## 15. Testing strategy
 
-- `npm test` — 10 Vitest files, **113 tests**, all against PGlite instances
+- `npm test` — 10 Vitest files, **119 tests**, all against PGlite instances
   that apply the real migration files (each suite keeps its own migration
   list; add new migrations to every list they must run under).
 - Suites: foundation/RLS matrix, suppliers+stock, production,
@@ -323,5 +335,6 @@ password length 12; SMTP configured for invitations.
 | "The change could not be saved. Check your database setup…" | A migration was not run on the live project (compare §6 list), or an RPC grant is missing — check the browser network tab + Supabase logs |
 | "Keep at least one active administrator" | Refuse to demote/deactivate the last admin — promote another first |
 | "This email already has an account…" on invite | User exists in Auth → manage access instead of re-inviting |
+| Newly added member cannot sign in | Invited user never opened the email link (still in the invited state, where password sign-in is refused) → complete the link, or re-add them with "Add without email" |
 | Document upload "The uploaded file was not found" | Storage object missing (failed upload) → retry upload; verify 0008 ran and the `attachments` bucket exists |
 | Invitations not delivered | SMTP not configured in Supabase Auth, or `NEXT_PUBLIC_SITE_URL` unset |

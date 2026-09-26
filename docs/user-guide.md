@@ -9,9 +9,9 @@ manufacturing & export workspace.
 
 ### Signing in
 1. Open your workspace address (your administrator will share it).
-2. Enter the **email address** you were invited with and the password you
-   set when accepting the invitation.
-3. First-time invitees are taken straight to a **Set password** screen —
+2. Enter the **email address** and the **password** your administrator gave
+   you — as two separate values in the two separate fields.
+3. If you were invited by email instead, first open that invitation and
    choose a passphrase of at least **12 characters**. You are then brought
    to your Overview.
 
@@ -201,6 +201,19 @@ Reports only ever contain rows your role is allowed to see.
    invitation**. They receive an email to set their own password
    (link valid 24 hours).
 2. If the invitation expires, just send it again.
+
+### Add someone without an email
+No mail server set up, or a colleague has no working email? Use **Add without
+email** on the same Team page:
+1. Fill their name, email address and access level.
+2. Type a sign-in password (at least **12 characters**) twice and press **Add
+   member**.
+3. Nothing is emailed. Give them the workspace address and that password
+   directly — they can sign in immediately and change it themselves later
+   under **Account security**.
+
+Because you set the password on their behalf, share it privately and ask them
+to change it at their first sign-in.
 
 ### Change access or pause someone
 On each team row: pick a new role and/or set **Inactive**, then **Save**.

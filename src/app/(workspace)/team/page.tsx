@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ArrowUpRight, UserPlus, Users } from "lucide-react";
+import { ArrowUpRight, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { AppIcon, PageHeading } from "@/components/ui";
-import { InviteForm, PendingInvitation } from "@/components/forms";
+import { InviteForm, PendingInvitation, StaffMemberForm } from "@/components/forms";
 import { TeamDirectory } from "@/components/team-directory";
 import { getInvitations, getStaff, requirePermission } from "@/lib/workspace";
 
@@ -18,7 +18,7 @@ export default async function TeamPage() {
       <PageHeading
         eyebrow="PEOPLE & ACCESS"
         title="A team that grows together"
-        description="Invite your colleagues and give everyone a clear place in the workflow."
+        description="Invite your colleagues by email, or add them directly with a password you set — and give everyone a clear place in the workflow."
       >
         <Link href="/roles" className="button button-secondary">
           <AppIcon name="roles" size={16} />
@@ -88,6 +88,19 @@ export default async function TeamPage() {
               process.env.SUPABASE_SECRET_KEY &&
                 process.env.NEXT_PUBLIC_SITE_URL,
             )}
+          />
+          <div className="invite-heading">
+            <span className="section-icon">
+              <ShieldCheck size={23} />
+            </span>
+            <h2>Add without email</h2>
+            <p>
+              Create the account yourself and share the password directly.
+            </p>
+          </div>
+          <StaffMemberForm
+            preview={actor.preview}
+            membersEnabled={Boolean(process.env.SUPABASE_SECRET_KEY)}
           />
         </section>
       </div>
