@@ -1256,6 +1256,15 @@ kbd {
   font-size: 11px;
   margin-bottom: 22px;
 }
+/* A second form in the same panel reads as a separate option. */
+.invite-panel .invite-heading:not(:first-child) {
+  margin-top: 28px;
+  padding-top: 26px;
+  border-top: 1px solid #edf0e8;
+}
+.invite-panel .invite-heading:not(:first-child) > h2 {
+  margin-top: 4px;
+}
 label {
   display: block;
   font-size: 12px;

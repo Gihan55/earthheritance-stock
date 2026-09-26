@@ -13,8 +13,10 @@ import {
   Save,
   Send,
   ShieldCheck,
+  UserPlus,
 } from "lucide-react";
 import {
+  addStaffMember,
   changePassword,
   inviteStaff,
   resetStaffPassword,
@@ -335,6 +337,106 @@ export function InviteForm({
       <SubmitButton pending={pending} disabled={preview || !invitationsEnabled}>
         <Send size={16} />
         Send invitation
+      </SubmitButton>
+    </form>
+  );
+}
+export function StaffMemberForm({
+  preview,
+  membersEnabled,
+}: {
+  preview: boolean;
+  membersEnabled: boolean;
+}) {
+  const [state, action, pending] = useActionState(
+    addStaffMember,
+    INITIAL_STATE,
+  );
+  const [visible, setVisible] = useState(false);
+  return (
+    <form id="add-member" action={action} className="stack-form">
+      <label>
+        Full name
+        <input
+          name="full_name"
+          required
+          minLength={2}
+          maxLength={100}
+          placeholder="Staff member’s name"
+          autoComplete="off"
+        />
+      </label>
+      <label>
+        Email address
+        <input
+          name="email"
+          type="email"
+          required
+          maxLength={254}
+          placeholder="name@company.com"
+          autoComplete="off"
+        />
+      </label>
+      <label>
+        Access level
+        <select name="role" defaultValue="stores">
+          {ROLES.map((role) => (
+            <option key={role} value={role}>
+              {ROLE_LABELS[role]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Sign-in password
+        <div className="password-input">
+          <input
+            name="password"
+            type={visible ? "text" : "password"}
+            required
+            minLength={12}
+            maxLength={128}
+            autoComplete="new-password"
+            placeholder="At least 12 characters"
+          />
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={visible ? "Hide password" : "Show password"}
+            onClick={() => setVisible(!visible)}
+          >
+            {visible ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+      </label>
+      <label>
+        Confirm password
+        <input
+          name="confirmPassword"
+          type={visible ? "text" : "password"}
+          required
+          maxLength={128}
+          autoComplete="new-password"
+        />
+      </label>
+      <p className="form-note">
+        <ShieldCheck size={16} />
+        No email is sent. Share this password securely; the member can change
+        it later from Account security.
+      </p>
+      <Feedback state={state} />
+      {preview ? (
+        <PreviewNote />
+      ) : (
+        !membersEnabled && (
+          <p className="form-feedback error">
+            Configure the server secret key to add accounts without an email.
+          </p>
+        )
+      )}
+      <SubmitButton pending={pending} disabled={preview || !membersEnabled}>
+        <UserPlus size={16} />
+        Add member
       </SubmitButton>
     </form>
   );

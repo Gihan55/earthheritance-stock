@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   serverClient: vi.fn(),
   revalidate: vi.fn(),
   passwordUpdate: vi.fn(),
+  createUser: vi.fn(),
 }));
 vi.mock("@/lib/supabase/config", () => ({
   isSupabaseConfigured: mocks.configured,
@@ -21,6 +22,7 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 import {
+  addStaffMember,
   cancelInvitation,
   changePassword,
   inviteStaff,
@@ -39,6 +41,10 @@ beforeEach(() => {
     rpc: mocks.rpc,
     auth: { updateUser: mocks.passwordUpdate },
   });
+  mocks.createUser.mockResolvedValue({ error: null });
+  mocks.adminClient.mockReturnValue({
+    auth: { admin: { createUser: mocks.createUser } },
+  });
 });
 const data = (values: Record<string, string>) => {
   const form = new FormData();
@@ -49,6 +55,7 @@ describe("server action boundaries", () => {
   it.each([
     saveCompany,
     inviteStaff,
+    addStaffMember,
     saveRolePermissions,
     updateStaffAccess,
     cancelInvitation,
@@ -64,6 +71,7 @@ describe("server action boundaries", () => {
   it.each([
     saveCompany,
     inviteStaff,
+    addStaffMember,
     saveRolePermissions,
     updateStaffAccess,
     cancelInvitation,
@@ -83,6 +91,73 @@ describe("server action boundaries", () => {
         role: "administrator",
         email: "test@example.com",
         full_name: "Test Staff",
+      }),
+    );
+    expect(result.success).toBe(false);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.adminClient).not.toHaveBeenCalled();
+  });
+  it("adds a member without email by confirming the created auth user", async () => {
+    process.env.SUPABASE_SECRET_KEY = "test-secret-key";
+    mocks.actor.mockResolvedValue({ permissions: ["users.manage"] });
+    const result = await addStaffMember(
+      INITIAL_STATE,
+      data({
+        full_name: "Direct Member",
+        email: "direct@example.com",
+        role: "stores",
+        password: "a-long-shared-password",
+        confirmPassword: "a-long-shared-password",
+      }),
+    );
+    expect(result.success).toBe(true);
+    expect(mocks.rpc).toHaveBeenCalledWith("app_prepare_invitation", {
+      staff_email: "direct@example.com",
+      staff_name: "Direct Member",
+      staff_role: "stores",
+    });
+    expect(mocks.createUser).toHaveBeenCalledWith({
+      email: "direct@example.com",
+      password: "a-long-shared-password",
+      email_confirm: true,
+    });
+    expect(mocks.rpc).not.toHaveBeenCalledWith(
+      "app_cancel_invitation",
+      expect.anything(),
+    );
+  });
+  it("cancels the invitation record when direct account creation fails", async () => {
+    process.env.SUPABASE_SECRET_KEY = "test-secret-key";
+    mocks.actor.mockResolvedValue({ permissions: ["users.manage"] });
+    mocks.createUser.mockResolvedValue({
+      error: { message: "User already registered" },
+    });
+    const result = await addStaffMember(
+      INITIAL_STATE,
+      data({
+        full_name: "Direct Member",
+        email: "direct@example.com",
+        role: "stores",
+        password: "a-long-shared-password",
+        confirmPassword: "a-long-shared-password",
+      }),
+    );
+    expect(result.success).toBe(false);
+    expect(result.message).toContain("could not be created");
+    expect(mocks.rpc).toHaveBeenCalledWith("app_cancel_invitation", {
+      staff_email: "direct@example.com",
+    });
+  });
+  it("requires the shared password to be confirmed before writing anything", async () => {
+    mocks.actor.mockResolvedValue({ permissions: ["users.manage"] });
+    const result = await addStaffMember(
+      INITIAL_STATE,
+      data({
+        full_name: "Direct Member",
+        email: "direct@example.com",
+        role: "stores",
+        password: "a-long-shared-password",
+        confirmPassword: "a-different-password",
       }),
     );
     expect(result.success).toBe(false);

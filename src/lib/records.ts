@@ -1155,10 +1155,11 @@ export async function getExportOrder(
 export async function getExportTotals() {
   const ctx = await guard("exports.view");
   if (!ctx) return null;
-  const { data } = await ctx.db
-    .from("export_order_progress")
-    .select("order_id,status");
-  const rows = (data ?? []) as { order_id: string; status: string }[];
+  // Tally straight from export_orders.status (indexed via
+  // export_orders_status_idx). The heavier export_order_progress view also
+  // aggregates order lines and reservations, which a simple count does not need.
+  const { data } = await ctx.db.from("export_orders").select("id,status");
+  const rows = (data ?? []) as { id: string; status: string }[];
   return {
     activeCount: rows.filter((r) =>
       ["confirmed", "partially_shipped", "shipped"].includes(r.status),

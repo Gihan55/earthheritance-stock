@@ -42,6 +42,7 @@ import {
   shipmentIdSchema,
   shipmentSchema,
   signInSchema,
+  staffMemberSchema,
   staffPasswordResetSchema,
   supplierIdSchema,
   supplierPaymentRecordSchema,
@@ -309,6 +310,39 @@ export async function inviteStaff(_previous: ActionState, form: FormData) {
       throw error;
     }
     return `Invitation sent to ${input.email}.`;
+  });
+}
+export async function addStaffMember(_previous: ActionState, form: FormData) {
+  return perform("users.manage", async (db) => {
+    const input = staffMemberSchema.parse(Object.fromEntries(form));
+    if (!process.env.SUPABASE_SECRET_KEY)
+      throw new ActionError(
+        "Set the server-side Supabase secret key to add members without an invitation.",
+      );
+    // Same trusted invitation record the email flow uses; it also rejects
+    // duplicate accounts and feeds the enrollment trigger with the role.
+    const { error: prepareError } = await db.rpc("app_prepare_invitation", {
+      staff_email: input.email,
+      staff_name: input.full_name,
+      staff_role: input.role,
+    });
+    rpcError(prepareError);
+    try {
+      const { error } = await createAdminSupabase().auth.admin.createUser({
+        email: input.email,
+        password: input.password,
+        email_confirm: true,
+      });
+      if (error)
+        throw new ActionError(
+          "The account could not be created. Check the email address and try again.",
+        );
+    } catch (error) {
+      await db.rpc("app_cancel_invitation", { staff_email: input.email });
+      throw error;
+    }
+    revalidatePath("/team", "page");
+    return `${input.full_name} can sign in now with the password you set. No email was sent.`;
   });
 }
 export async function updateStaffAccess(

@@ -30,6 +30,22 @@ export const inviteSchema = z.object({
   email: emailSchema,
   role: z.enum(ROLES),
 });
+export const staffMemberSchema = z
+  .object({
+    full_name: z
+      .string()
+      .trim()
+      .min(2, "Enter the staff member’s full name.")
+      .max(100),
+    email: emailSchema,
+    role: z.enum(ROLES),
+    password: z.string().min(12, "Use at least 12 characters.").max(128),
+    confirmPassword: z.string(),
+  })
+  .refine((value) => value.password === value.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
 export const accessSchema = z.object({
   user_id: z.uuid(),
   role: z.enum(ROLES),

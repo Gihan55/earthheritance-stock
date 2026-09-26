@@ -46,7 +46,7 @@ uploading files directly to Storage.
 | Documents | `/modules/documents/invoice/[id]`, `/modules/documents/packing/[id]` | Printable commercial invoices and packing lists on company letterhead |
 | Files | `/modules/files/[entity]/[id]` | Private supporting documents (certificates, B/L, payment evidence) attached to any record |
 | Reports | `/modules/reports` | Stock, production, export sales, receivables/payables, overdue, statements — with CSV export and print |
-| Admin | `/team`, `/roles`, `/settings`, `/setup` | Staff invitations, role permission matrix, company letterhead details |
+| Admin | `/team`, `/roles`, `/settings`, `/setup` | Staff invitations and direct account creation, role permission matrix, company letterhead details |
 
 ## 3. Roles & permissions
 
@@ -80,7 +80,9 @@ policies on file paths. Hiding a menu is never the only defense.
   access from the folder's entity type; downloads go through
   `/attachments/[id]` which checks RLS then issues a 30-second signed URL.
 - Sign-ups are invitation-only; invitations enroll the user with the assigned
-  role via a trigger (must be accepted within 24 hours).
+  role via a trigger (must be accepted within 24 hours). Administrators can
+  also create a confirmed account directly from **Team** ("Add without email")
+  with the same trigger-assigned role and no email delivery.
 - The app **fails closed**: production without Supabase env vars refuses to
   serve data; local development without them shows a read-only preview.
 
@@ -128,10 +130,12 @@ npm run seed:demo      # opt-in demo data against the configured project
 2. Run migrations **in order** in SQL Editor (or `supabase db push`):
    `0001_foundation` → `0002_suppliers_stock` → `0003_production` →
    `0004_exports_finance` → `0005_reporting` → `0006_performance` →
-   `0007_register_references` → `0008_documents` → `0009_staff_password_audit`.
+   `0007_register_references` → `0008_documents` → `0009_staff_password_audit` →
+   `0010_rls_plan_stability`.
 3. Authentication → URL Configuration: set **Site URL** to the app origin and
    add `<origin>/auth/callback` as a redirect URL. Disable public sign-ups.
-   Set minimum password length 12. Configure SMTP for invitation emails.
+   Set minimum password length 12. Configure SMTP only if you plan to send
+   invitation emails (see §8).
 4. Create the first administrator (must be the very first profile):
    - Authentication → Users → **Add user** (no email confirmation), copy UUID.
    - SQL Editor: `select public.app_bootstrap_admin('<uuid>', 'Your Name');`
@@ -140,15 +144,35 @@ npm run seed:demo      # opt-in demo data against the configured project
 
 ## 8. Adding team members
 
-1. Sign in as administrator → **Team**.
-2. Enter email, name and role → **Send invitation** (uses the service-role key
+There are two ways to create an account, both on **Team** as administrator.
+
+**A. Invite by email** (self-set password)
+
+1. Enter email, name and role → **Send invitation** (uses the service-role key
    on the server; the invitee receives a Supabase email to set a password).
-3. When the invitee accepts, a database trigger creates their profile with the
+2. When the invitee accepts, a database trigger creates their profile with the
    assigned role automatically — acceptances older than 24 hours must be
    re-invited.
-4. Change roles or deactivate anyone from **Team** at any time; deactivation
+3. Requires working SMTP in Supabase Authentication → SMTP settings.
+
+**B. Add without email** (you set the password; no email is sent)
+
+1. Fill name, email, access level and a password of at least 12 characters
+   twice → **Add member**.
+2. The same trusted invitation record is prepared (so duplicate emails are
+   still rejected and the role is enforced in-database), then the service-role
+   Auth admin API creates a **confirmed** user with that password. The
+   enrollment trigger fires immediately, so the profile and role appear at once
+   and the person can sign in without ever opening an email.
+3. Hand the password over privately and have them change it from
+   **Account security**; if the Auth call fails, the pending invitation record
+   is cancelled automatically.
+
+Then, either way:
+
+1. Change roles or deactivate anyone from **Team** at any time; deactivation
    preserves all historical records and cuts access immediately.
-5. Passwords: every signed-in user changes their own from the account menu →
+2. Passwords: every signed-in user changes their own from the account menu →
    **Change password** (`/account/password`). If a colleague is locked out,
    an administrator can set a new password for them from **Team** →
    **Reset password** (the action requires `users.manage`, refuses to reset

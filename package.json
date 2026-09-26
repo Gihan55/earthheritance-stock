@@ -12,7 +12,8 @@
     "test:system": "vitest run tests/full-system.test.ts",
     "test:production": "node --test tests/production-boundary.test.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
-    "clean:demo": "node scripts/seed-demo.mjs --cleanup"
+    "clean:demo": "node scripts/seed-demo.mjs --cleanup",
+    "docs:pdf": "node scripts/export-docs-pdf.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -31,6 +32,7 @@
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.3.5",
+    "marked": "^18.0.14",
     "typescript": "^5.0.0",
     "vitest": "^3.0.0"
   }
