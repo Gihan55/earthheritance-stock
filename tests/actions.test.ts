@@ -10,6 +10,10 @@ const mocks = vi.hoisted(() => ({
   revalidate: vi.fn(),
   passwordUpdate: vi.fn(),
   createUser: vi.fn(),
+  userUpdate: vi.fn(),
+  passwordGrant: vi.fn(),
+  maybeSingle: vi.fn(),
+  single: vi.fn(),
 }));
 vi.mock("@/lib/supabase/config", () => ({
   isSupabaseConfigured: mocks.configured,
@@ -26,11 +30,14 @@ import {
   cancelInvitation,
   changePassword,
   inviteStaff,
+  resetStaffPassword,
   saveCompany,
   saveRolePermissions,
   signIn,
   updateStaffAccess,
+  verifyStaffEmail,
 } from "../src/app/actions";
+const targetId = "33333333-3333-4333-8333-333333333333";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -39,11 +46,31 @@ beforeEach(() => {
   mocks.rpc.mockResolvedValue({ error: null });
   mocks.serverClient.mockResolvedValue({
     rpc: mocks.rpc,
-    auth: { updateUser: mocks.passwordUpdate },
+    auth: {
+      updateUser: mocks.passwordUpdate,
+      signInWithPassword: mocks.passwordGrant,
+    },
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: mocks.maybeSingle, single: mocks.single }) }) }),
   });
   mocks.createUser.mockResolvedValue({ error: null });
+  mocks.userUpdate.mockResolvedValue({ error: null });
+  mocks.passwordGrant.mockResolvedValue({
+    data: { user: { id: targetId } },
+    error: null,
+  });
+  mocks.maybeSingle.mockResolvedValue({
+    data: {
+      id: targetId,
+      full_name: "Test Staff",
+      email: "staff@example.com",
+      role: "stores",
+      is_active: true,
+    },
+    error: null,
+  });
+  mocks.single.mockResolvedValue({ data: { is_active: true }, error: null });
   mocks.adminClient.mockReturnValue({
-    auth: { admin: { createUser: mocks.createUser } },
+    auth: { admin: { createUser: mocks.createUser, updateUserById: mocks.userUpdate } },
   });
 });
 const data = (values: Record<string, string>) => {
@@ -61,6 +88,7 @@ describe("server action boundaries", () => {
     cancelInvitation,
     changePassword,
     signIn,
+    verifyStaffEmail,
   ])("rejects unconfigured preview writes: %s", async (action) => {
     mocks.configured.mockReturnValue(false);
     const result = await action(INITIAL_STATE, new FormData());
@@ -75,6 +103,7 @@ describe("server action boundaries", () => {
     saveRolePermissions,
     updateStaffAccess,
     cancelInvitation,
+    verifyStaffEmail,
   ])("requires a live active actor: %s", async (action) => {
     const result = await action(INITIAL_STATE, new FormData());
     expect(result.success).toBe(false);
@@ -235,5 +264,70 @@ describe("server action boundaries", () => {
     );
     expect(result.success).toBe(false);
     expect(mocks.passwordUpdate).not.toHaveBeenCalled();
+  });
+  it("confirms the email address while an administrator resets a password", async () => {
+    process.env.SUPABASE_SECRET_KEY = "test-secret-key";
+    mocks.actor.mockResolvedValue({ permissions: ["users.manage"] });
+    const result = await resetStaffPassword(
+      INITIAL_STATE,
+      data({
+        user_id: targetId,
+        password: "a-long-shared-password",
+        confirmPassword: "a-long-shared-password",
+      }),
+    );
+    expect(result.success).toBe(true);
+    // GoTrue refuses password sign-in for an unconfirmed account, so a reset
+    // has to confirm the address in the same admin update.
+    expect(mocks.userUpdate).toHaveBeenCalledWith(targetId, {
+      password: "a-long-shared-password",
+      email_confirm: true,
+    });
+    expect(mocks.rpc).toHaveBeenCalledWith("app_log_staff_password_reset", {
+      p_target_user: targetId,
+    });
+  });
+  it("verifies a waiting account and records the audit event", async () => {
+    process.env.SUPABASE_SECRET_KEY = "test-secret-key";
+    mocks.actor.mockResolvedValue({ permissions: ["users.manage"] });
+    const result = await verifyStaffEmail(
+      INITIAL_STATE,
+      data({ user_id: targetId }),
+    );
+    expect(result.success).toBe(true);
+    expect(mocks.userUpdate).toHaveBeenCalledWith(targetId, {
+      email_confirm: true,
+    });
+    expect(mocks.rpc).toHaveBeenCalledWith("app_log_staff_email_verify", {
+      p_target_user: targetId,
+    });
+    expect(mocks.revalidate).toHaveBeenCalledWith("/team", "page");
+  });
+  it("refuses to verify a staff member the actor cannot see", async () => {
+    process.env.SUPABASE_SECRET_KEY = "test-secret-key";
+    mocks.actor.mockResolvedValue({ permissions: ["users.manage"] });
+    mocks.maybeSingle.mockResolvedValue({ data: null, error: null });
+    const result = await verifyStaffEmail(
+      INITIAL_STATE,
+      data({ user_id: targetId }),
+    );
+    expect(result.success).toBe(false);
+    expect(mocks.userUpdate).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalledWith(
+      "app_log_staff_email_verify",
+      expect.anything(),
+    );
+  });
+  it("explains an unconfirmed account instead of blaming the password", async () => {
+    mocks.passwordGrant.mockResolvedValue({
+      data: { user: null },
+      error: { code: "email_not_confirmed", message: "Email not confirmed" },
+    });
+    const result = await signIn(
+      INITIAL_STATE,
+      data({ email: "staff@example.com", password: "whatever-they-typed" }),
+    );
+    expect(result.success).toBe(false);
+    expect(result.message).toContain("not confirmed its email address");
   });
 });

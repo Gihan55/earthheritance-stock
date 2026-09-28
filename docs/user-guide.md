@@ -16,8 +16,8 @@ manufacturing & export workspace.
    to your Overview.
 
 > Access is by invitation only. If you cannot sign in, or you think your
-> password needs resetting, contact your administrator — they can reset it
-> from the Team page.
+> password needs resetting, contact your administrator — they can confirm your
+> email or reset your password from the Team page.
 
 ### Your Overview
 The first page after sign-in shows the numbers that matter to **your**
@@ -214,6 +214,19 @@ email** on the same Team page:
 
 Because you set the password on their behalf, share it privately and ask them
 to change it at their first sign-in.
+
+### When a colleague cannot sign in
+If their row shows **Waiting for verification**, their invitation email was
+never opened — and the system will not let anyone sign in to an unverified
+address, whatever password they type. Two ways to fix it from their row:
+
+1. **Confirm email** — marks the address verified. They still need a password,
+   so use this together with their invitation link or the next option.
+2. **Reset password** — sets a new password *and* confirms the address in one
+   step. This is usually all that is needed.
+
+Tell them the message on the sign-in screen now says which of the two problems
+they have, instead of only blaming the password.
 
 ### Change access or pause someone
 On each team row: pick a new role and/or set **Inactive**, then **Save**.

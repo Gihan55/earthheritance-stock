@@ -23,6 +23,7 @@ import {
   saveCompany,
   signIn,
   updateStaffAccess,
+  verifyStaffEmail,
   cancelInvitation,
 } from "@/app/actions";
 import { INITIAL_STATE, type ActionState } from "@/lib/validation";
@@ -568,6 +569,37 @@ export function StaffPasswordResetForm({
           Cancel
         </button>
       </div>
+    </form>
+  );
+}
+/**
+ * Confirms an invited account whose address was never verified. Supabase
+ * refuses password sign-in until the email is confirmed, so this is the fix
+ * for a colleague who appears in the team but cannot sign in.
+ */
+export function StaffEmailVerifyForm({
+  profile,
+  preview,
+}: {
+  profile: StaffProfile;
+  preview: boolean;
+}) {
+  const [state, action, pending] = useActionState(
+    verifyStaffEmail,
+    INITIAL_STATE,
+  );
+  return (
+    <form action={action} className="staff-verify-form">
+      <input type="hidden" name="user_id" value={profile.id} />
+      <button
+        type="submit"
+        className="button button-secondary button-small"
+        disabled={preview || pending}
+      >
+        <Mail size={15} />
+        {pending ? "Confirming..." : "Confirm email"}
+      </button>
+      <Feedback state={state} />
     </form>
   );
 }

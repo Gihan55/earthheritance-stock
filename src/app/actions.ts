@@ -44,6 +44,7 @@ import {
   signInSchema,
   staffMemberSchema,
   staffPasswordResetSchema,
+  staffVerifySchema,
   supplierIdSchema,
   supplierPaymentRecordSchema,
   supplierPaymentSchema,
@@ -204,10 +205,22 @@ export async function signIn(
   try {
     const db = await createServerSupabase();
     const { data, error } = await db.auth.signInWithPassword(input.data);
-    if (error || !data.user)
+    if (error || !data.user) {
+      // GoTrue refuses password sign-in for an account whose address was never
+      // confirmed (an invitation link that was not opened) even when the
+      // password is correct, so say that instead of blaming the password.
+      if (
+        error &&
+        (error.code === "email_not_confirmed" ||
+          /not confirmed/i.test(error.message))
+      )
+        return fail(
+          "This account has not confirmed its email address yet. Open the invitation email, or ask your administrator to verify it from the Team page.",
+        );
       return fail(
         "Unable to sign in. Check your email and password and try again.",
       );
+    }
     const { data: profile } = await db
       .from("profiles")
       .select("is_active")
@@ -396,7 +409,10 @@ export async function resetStaffPassword(
     }
     const { error } = await createAdminSupabase().auth.admin.updateUserById(
       input.user_id,
-      { password: input.password },
+      // email_confirm is required, not cosmetic: GoTrue only writes
+      // email_confirmed_at when the admin update asks for it, and it refuses
+      // password sign-in for an unconfirmed account whatever the password is.
+      { password: input.password, email_confirm: true },
     );
     if (error)
       throw new ActionError(
@@ -411,6 +427,42 @@ export async function resetStaffPassword(
     );
     if (auditError) rpcError(auditError);
     return `Password updated for ${target.full_name}. They must sign in again.`;
+  });
+}
+export async function verifyStaffEmail(
+  _previous: ActionState,
+  form: FormData,
+) {
+  return perform("users.manage", async (db) => {
+    const input = staffVerifySchema.parse(Object.fromEntries(form));
+    if (!process.env.SUPABASE_SECRET_KEY)
+      throw new ActionError(
+        "Set the server-side Supabase secret key to verify staff accounts.",
+      );
+    const { data: target, error: lookupError } = await db
+      .from("profiles")
+      .select("id, full_name, email")
+      .eq("id", input.user_id)
+      .maybeSingle();
+    if (lookupError) rpcError(lookupError);
+    if (!target)
+      throw new ActionError(
+        "Staff member not found. Reset a password after their invitation is accepted.",
+      );
+    const { error } = await createAdminSupabase().auth.admin.updateUserById(
+      input.user_id,
+      { email_confirm: true },
+    );
+    if (error)
+      throw new ActionError(
+        "The email could not be verified. Check that the account still exists in Supabase Auth.",
+      );
+    const { error: auditError } = await db.rpc("app_log_staff_email_verify", {
+      p_target_user: input.user_id,
+    });
+    if (auditError) rpcError(auditError);
+    revalidatePath("/team", "page");
+    return `${target.full_name}'s email is confirmed. They can sign in now, or set a password first from their Team row.`;
   });
 }
 export async function saveRolePermissions(

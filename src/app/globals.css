@@ -1600,6 +1600,7 @@ label > small {
 }
 .staff-identity {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
   margin-bottom: 15px;
@@ -1655,6 +1656,16 @@ label > small {
 }
 .staff-password-form .form-note {
   font-size: 11px;
+}
+.staff-verify-form {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.staff-verify-form .button-small {
+  min-height: 34px;
 }
 .pending-panel {
   margin-top: 22px;
@@ -2962,6 +2973,9 @@ label > small {
   }
   .staff-access-form .button-small {
     flex: 1 1 100%;
+  }
+  .staff-verify-form .button-small {
+    width: 100%;
   }
   .permission-row input {
     width: 22px;
