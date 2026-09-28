@@ -3,14 +3,20 @@ import { ArrowUpRight, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { AppIcon, PageHeading } from "@/components/ui";
 import { InviteForm, PendingInvitation, StaffMemberForm } from "@/components/forms";
 import { TeamDirectory } from "@/components/team-directory";
-import { getInvitations, getStaff, requirePermission } from "@/lib/workspace";
+import {
+  getInvitations,
+  getStaff,
+  getUnverifiedEmails,
+  requirePermission,
+} from "@/lib/workspace";
 
 export const metadata = { title: "Team members" };
 export default async function TeamPage() {
   const actor = await requirePermission("users.manage");
-  const [staff, invitations] = await Promise.all([
+  const [staff, invitations, unverified] = await Promise.all([
     getStaff(),
     getInvitations(),
+    getUnverifiedEmails(),
   ]);
   const active = staff.filter((member) => member.is_active).length;
   return (
@@ -56,7 +62,11 @@ export default async function TeamPage() {
       </div>
       <div className="team-layout">
         <div>
-          <TeamDirectory staff={staff} preview={actor.preview} />
+          <TeamDirectory
+            staff={staff}
+            preview={actor.preview}
+            unverified={unverified}
+          />
           {invitations.length > 0 && (
             <section className="panel panel-body pending-panel">
               <h2>Pending invitation requests</h2>

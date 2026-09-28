@@ -67,6 +67,7 @@ beforeAll(async () => {
     "../supabase/migrations/0008_documents.sql",
     "../supabase/migrations/0009_staff_password_audit.sql",
     "../supabase/migrations/0010_rls_plan_stability.sql",
+    "../supabase/migrations/0011_staff_email_verify.sql",
   ])
     await db.exec(await readFile(new URL(migration, import.meta.url), "utf8"));
   for (const [role, id] of Object.entries(ids))
@@ -279,5 +280,46 @@ describe("staff password reset audit", () => {
       ["99999999-9999-4999-8999-000000000099"],
       /Staff member not found/,
     );
+  });
+});
+
+describe("staff email verification audit", () => {
+  it("lets an administrator record a verification for a colleague", async () => {
+    await actAs("administrator");
+    await q("select public.app_log_staff_email_verify($1::uuid)", [
+      ids.stores,
+    ]);
+    await db.exec("reset role");
+    const audit = await q(
+      "select actor_id, action, target, details from public.audit_events where action = 'staff.email_verified'",
+    );
+    expect(audit).toHaveLength(1);
+    expect(audit[0].actor_id).toBe(ids.administrator);
+    expect(audit[0].target).toBe(ids.stores);
+    const details = audit[0].details as unknown as {
+      name?: string;
+      email?: string;
+    };
+    expect(details.name).toBe("Test stores");
+    expect(details.email).toBe("stores@example.com");
+  });
+
+  it("blocks users without users.manage and unknown targets", async () => {
+    await actAs("stores");
+    await rejects(
+      "select public.app_log_staff_email_verify($1::uuid)",
+      [ids.production],
+      /Not authorized/,
+    );
+    await actAs("administrator");
+    await rejects(
+      "select public.app_log_staff_email_verify($1::uuid)",
+      ["99999999-9999-4999-8999-000000000099"],
+      /Staff member not found/,
+    );
+    await db.exec("reset role");
+    expect(
+      await q("select * from public.audit_events where action = 'staff.email_verified'"),
+    ).toHaveLength(0);
   });
 });

@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { createServerSupabase } from "./supabase/server";
+import { createServerSupabase, createAdminSupabase } from "./supabase/server";
 import { isLocalPreview, isSupabaseConfigured } from "./supabase/config";
 import {
   DEFAULT_PERMISSIONS,
@@ -122,6 +122,35 @@ export async function getInvitations(): Promise<Invitation[]> {
     .order("created_at", { ascending: false });
   if (error) throw new Error("Invitations could not be loaded.");
   return data as Invitation[];
+}
+/**
+ * Which staff accounts are still waiting for email confirmation, keyed by user
+ * id. GoTrue refuses password sign-in for an unconfirmed account whatever the
+ * password is, so the Team page surfaces it the way the Supabase dashboard
+ * does. Confirmation lives in the auth schema, which RLS does not expose to
+ * browser sessions, so this reads through the service-role admin client and
+ * fails open to an empty map when it is unavailable.
+ */
+export async function getUnverifiedEmails(): Promise<Record<string, boolean>> {
+  const actor = await requirePermission("users.manage");
+  if (actor.preview || !process.env.SUPABASE_SECRET_KEY) return {};
+  try {
+    const admin = createAdminSupabase();
+    const unverified: Record<string, boolean> = {};
+    for (let page = 1; page <= 10; page += 1) {
+      const { data, error } = await admin.auth.admin.listUsers({
+        page,
+        perPage: 200,
+      });
+      if (error) return {};
+      const users = data.users ?? [];
+      for (const user of users) if (!user.email_confirmed_at) unverified[user.id] = true;
+      if (users.length < 200) break;
+    }
+    return unverified;
+  } catch {
+    return {};
+  }
 }
 export async function getRolePermissions(): Promise<
   Record<Role, Permission[]>

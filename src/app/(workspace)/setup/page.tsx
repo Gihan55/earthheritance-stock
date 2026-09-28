@@ -62,14 +62,16 @@ supabase/migrations/0006_performance.sql
 supabase/migrations/0007_register_references.sql
 supabase/migrations/0008_documents.sql
 supabase/migrations/0009_staff_password_audit.sql
-supabase/migrations/0010_rls_plan_stability.sql`}</pre>
+supabase/migrations/0010_rls_plan_stability.sql
+supabase/migrations/0011_staff_email_verify.sql`}</pre>
               <p>
                 Together these create profiles, six access levels, permissions,
                 company settings, invitation handling, audit records and
                 row-level security; then the stock, production, export and
                 finance tables, reporting views, performance indexes, the
-                private attachments bucket for supporting documents, and the
-                staff password-reset audit trail.
+                private attachments bucket for supporting documents, the
+                staff password-reset and email-verification audit trails, and
+                the row-level-security plan stability fix.
               </p>
             </div>
           </section>

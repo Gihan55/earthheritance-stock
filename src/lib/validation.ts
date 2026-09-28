@@ -46,6 +46,7 @@ export const staffMemberSchema = z
     message: "Passwords do not match.",
     path: ["confirmPassword"],
   });
+export const staffVerifySchema = z.object({ user_id: z.uuid() });
 export const accessSchema = z.object({
   user_id: z.uuid(),
   role: z.enum(ROLES),

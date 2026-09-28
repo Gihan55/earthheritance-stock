@@ -131,7 +131,7 @@ npm run seed:demo      # opt-in demo data against the configured project
    `0001_foundation` → `0002_suppliers_stock` → `0003_production` →
    `0004_exports_finance` → `0005_reporting` → `0006_performance` →
    `0007_register_references` → `0008_documents` → `0009_staff_password_audit` →
-   `0010_rls_plan_stability`.
+   `0010_rls_plan_stability` → `0011_staff_email_verify`.
 3. Authentication → URL Configuration: set **Site URL** to the app origin and
    add `<origin>/auth/callback` as a redirect URL. Disable public sign-ups.
    Set minimum password length 12. Configure SMTP only if you plan to send
@@ -178,8 +178,28 @@ Then, either way:
    **Reset password** (the action requires `users.manage`, refuses to reset
    the last active administrator, invalidates the member's sessions, and is
    recorded in the audit log as `staff.password_reset`).
-6. Adjust what a role can do from **Roles** (administrator permissions are
+3. Adjust what a role can do from **Roles** (administrator permissions are
    protected and always full).
+
+### Accounts waiting for verification
+
+An invited user who never opens the invitation email stays **unconfirmed**, and
+Supabase refuses password sign-in for an unconfirmed account even when the
+password is correct. The Team page surfaces this the same way the Supabase
+dashboard does — an amber *Waiting for verification* badge on that member's row
+— and offers two fixes, both requiring `users.manage`:
+
+- **Confirm email** (`verifyStaffEmail`) marks the address verified through the
+  Auth admin API and records `staff.email_verified`. The member still needs a
+  password, so pair it with a password reset or have them use their invitation
+  link.
+- **Reset password** now sends `email_confirm: true` alongside the new
+  password, so a single reset un-sticks an unconfirmed account.
+
+The status is read with the service-role client (`auth.admin.listUsers`) and
+fails open to no badges when the secret key is unavailable, because email
+confirmation lives in the `auth` schema, which RLS does not expose to browser
+sessions.
 
 ## 9. Deploying to Vercel
 

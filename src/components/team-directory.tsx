@@ -4,14 +4,16 @@ import { Search } from "lucide-react";
 import type { StaffProfile } from "@/lib/workspace";
 import { initials, ROLE_LABELS, ROLES } from "@/lib/permissions";
 import { Badge, EmptyState } from "./ui";
-import { StaffAccessForm, StaffPasswordResetForm } from "./forms";
+import { StaffAccessForm, StaffEmailVerifyForm, StaffPasswordResetForm } from "./forms";
 
 export function TeamDirectory({
   staff,
   preview,
+  unverified = {},
 }: {
   staff: StaffProfile[];
   preview: boolean;
+  unverified?: Record<string, boolean>;
 }) {
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("all");
@@ -25,6 +27,7 @@ export function TeamDirectory({
   const adminCount = staff.filter(
     (member) => member.is_active && member.role === "administrator",
   ).length;
+  const waitingCount = staff.filter((member) => unverified[member.id]).length;
   return (
     <section className="panel">
       <div className="panel-heading">
@@ -92,6 +95,9 @@ export function TeamDirectory({
                 <Badge tone={member.is_active ? "green" : "neutral"}>
                   {member.is_active ? "Active" : "Inactive"}
                 </Badge>
+                {unverified[member.id] && (
+                  <Badge tone="amber">Waiting for verification</Badge>
+                )}
               </div>
               <StaffAccessForm
                 key={`${member.id}-${member.role}-${member.is_active}`}
@@ -103,11 +109,17 @@ export function TeamDirectory({
                 }
               />
               {!preview && <StaffPasswordResetForm profile={member} preview={preview} />}
+              {!preview && unverified[member.id] && (
+                <StaffEmailVerifyForm profile={member} preview={preview} />
+              )}
             </div>
           ))}
         </div>
       )}
       <div className="panel-footnote">
+        {waitingCount > 0
+          ? `${waitingCount} ${waitingCount === 1 ? "account is" : "accounts are"} waiting for email verification. Supabase refuses password sign-in until the address is confirmed, so confirm it here or reset their password. `
+          : ""}
         Deactivating a staff member preserves their historical records. Use
         Reset password only when a colleague needs access restored right away;
         everyone can also change their own password from the account menu.

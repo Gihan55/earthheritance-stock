@@ -61,10 +61,10 @@ Key rules:
   `app_confirm_purchase`, `app_dispatch_shipment`, …). Every RPC re-checks
   `public.app_has_permission(...)` inside the database — the server action
   check is defense in depth, not the only gate.
-- The service-role client (`createAdminSupabase`) is used in exactly three
-places: managing Auth accounts (sending invitations, creating accounts
-  directly, resetting passwords), and confirming/mounting uploaded Storage
-  objects.
+- The service-role client (`createAdminSupabase`) is used for Auth-account
+  work (sending invitations, creating accounts directly, resetting passwords,
+  confirming email addresses, and listing accounts to read their confirmation
+  state) and for confirming/mounting uploaded Storage objects.
 - `records.ts` starts with `import "server-only"`; client components may
   only `import type` from it (vitest aliases `server-only` to a stub).
 
@@ -87,7 +87,7 @@ src/
     validation.ts         zod schemas for every server action
     workspace.ts          getActor / requirePermission / getStaff
     supabase/             client factories (browser / server / admin)
-supabase/migrations/      0001…0010, applied in order (see §6)
+supabase/migrations/      0001…0011, applied in order (see §6)
 tests/                    Vitest + PGlite integration suites
 scripts/seed-demo.mjs     opt-in demo data seeder
 docs/                     this document + user guide
@@ -113,13 +113,13 @@ docs/                     this document + user guide
 | `/modules/documents/packing/[id]` | Printable packing list | `exports.view` |
 | `/modules/files/[entity]/[id]` | Supporting-document upload/list per record | entity read permission |
 | `/attachments/[id]` | Download: RLS check → 30 s signed URL | document owner check |
-| `/team` | Invite staff, add members without email, roles, activate/deactivate, password reset | `users.manage` |
+| `/team` | Invite staff, add members without email, confirm unverified emails, roles, activate/deactivate, password reset | `users.manage` |
 | `/roles` | Edit role → permission assignments | `roles.manage` |
 | `/settings` | Company profile, base currency, warehouse | `settings.manage` |
 | `/account/password` | Self-service password change | any signed-in user |
 | `/setup` | Guided administrator setup checklist | `administrator` |
 
-## 6. Data model (migrations 0001–0010)
+## 6. Data model (migrations 0001–0011)
 
 | Migration | Contents |
 |---|---|
@@ -133,6 +133,7 @@ docs/                     this document + user guide
 | `0008_documents` | `documents` table (entity whitelist, 10 MB, mime whitelist, path regex), `app_document_read_ok`/`write_ok`, `app_register_document`, `app_remove_document`, private `attachments` bucket + path-scoped storage policies |
 | `0009_staff_password_audit` | `app_log_staff_password_reset(uuid)` — audit RPC for admin password resets (see §12) |
 | `0010_rls_plan_stability` | Wraps row-independent RLS permission checks in a scalar sub-select so each policy is evaluated once per query (not per row), plus an `export_reservations(order_line_id)` index — benchmark-proven ~11x faster aggregate/register queries |
+| `0011_staff_email_verify` | `app_log_staff_email_verify(uuid)` — audit RPC for confirming an unverified staff email address (see §12) |
 
 Status enums (lifecycle states):
 
@@ -244,7 +245,7 @@ private and entity-scoped.
 the RPCs (never by direct browser insert). Visible on Overview to roles with
 `audit.view`. Notable actions include: `company.updated`,
 `staff.invitation_prepared`, `staff.invited`, `staff.access_updated`,
-`staff.password_reset`, `supplier.created/updated/active_updated`,
+`staff.password_reset`, `staff.email_verified`, `supplier.created/updated/active_updated`,
 `item.*`, `purchase.created/confirmed/cancelled`, `goods.received`,
 `adjustment.requested/approved/rejected`, batch post/reverse, order
 confirm/dispatch/deliver/close/cancel, invoice issued, receipt/payment
@@ -279,6 +280,16 @@ recorded/allocated/reversed, `document.added`, `document.removed`,
   browser sessions.
 - **Deactivation** keeps all history and cuts access immediately
   (`app_is_active()` participates in RLS policies).
+- **Email confirmation**: an invited user who never opens the invitation link
+  stays unconfirmed, and GoTrue refuses password sign-in for an unconfirmed
+  account whatever the password is (`token.go` returns
+  `Email not confirmed`). The Team page reads each account's
+  `email_confirmed_at` through the service-role `listUsers` API (the `auth`
+  schema is not exposed to browser sessions) and marks such members *Waiting
+  for verification*. **Confirm email** calls Auth admin `updateUserById(id,
+  { email_confirm: true })` and records `staff.email_verified` through
+  `app_log_staff_email_verify`; **Reset password** sends
+  `email_confirm: true` with the new password for the same reason.
 
 ## 13. Environment & configuration
 
@@ -291,7 +302,7 @@ Required environment variables:
 | `SUPABASE_SECRET_KEY` | server-only | service-role key (invites, storage checks, password reset) |
 | `NEXT_PUBLIC_SITE_URL` | public | HTTPS origin used in invitation redirects |
 
-Supabase side: run migrations 0001→0010 **in order**; Auth → Site URL = app
+Supabase side: run migrations 0001→0011 **in order**; Auth → Site URL = app
 origin, redirect `<origin>/auth/callback`, disable public sign-up, minimum
 password length 12.
 SMTP is required for invitations only. Adding a member without email needs no
@@ -314,7 +325,7 @@ SMTP, just `SUPABASE_SECRET_KEY`.
 
 ## 15. Testing strategy
 
-- `npm test` — 10 Vitest files, **119 tests**, all against PGlite instances
+- `npm test` — 10 Vitest files, **127 tests**, all against PGlite instances
   that apply the real migration files (each suite keeps its own migration
   list; add new migrations to every list they must run under).
 - Suites: foundation/RLS matrix, suppliers+stock, production,
@@ -336,5 +347,6 @@ SMTP, just `SUPABASE_SECRET_KEY`.
 | "Keep at least one active administrator" | Refuse to demote/deactivate the last admin — promote another first |
 | "This email already has an account…" on invite | User exists in Auth → manage access instead of re-inviting |
 | Newly added member cannot sign in | Invited user never opened the email link (still in the invited state, where password sign-in is refused) → complete the link, or re-add them with "Add without email" |
+| "This account has not confirmed its email address yet" on sign-in | `email_confirmed_at` is null (invitation link never opened) → administrator confirms it from the Team row, or resets the password, which now also confirms the address |
 | Document upload "The uploaded file was not found" | Storage object missing (failed upload) → retry upload; verify 0008 ran and the `attachments` bucket exists |
 | Invitations not delivered | SMTP not configured in Supabase Auth, or `NEXT_PUBLIC_SITE_URL` unset |
